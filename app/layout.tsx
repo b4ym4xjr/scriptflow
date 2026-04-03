@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import React, { ReactNode } from "react";
+import { Toaster } from "sonner";
+import { ReactNode } from "react";
+import { Providers } from "@/components/Providers";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,20 +18,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ScriptFlow",
-  description: "A content creation platform for Content Creators.",
+  description: "Task Management Platform",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased">
+        <Providers>
+          <main className="min-h-screen w-full flex flex-col">{children}</main>
+          <Toaster richColors={true} duration={2000} position={"top-center"} />
+        </Providers>
+        <Analytics />
+      </body>
     </html>
   );
 }
