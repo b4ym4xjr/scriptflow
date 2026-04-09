@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { ReactNode } from "react";
 import { Providers } from "@/components/Providers";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default async function RootLayout({
           <Toaster richColors={true} duration={2000} position={"top-center"} />
         </Providers>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
