@@ -7,6 +7,8 @@ import { ScriptCard } from "@/components/scripts/ScriptCard";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText } from "lucide-react";
 import type { ScriptStatus, ScriptType } from "@/db/schema";
+import { Suspense } from "react";
+import { SearchFilter } from "@/components/SearchFilter";
 
 interface HomePageProps {
   searchParams: Promise<{ q?: string; status?: string; type?: string }>;
@@ -50,6 +52,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </Link>
             </div>
           </div>
+          <Suspense>
+            <SearchFilter />
+          </Suspense>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
