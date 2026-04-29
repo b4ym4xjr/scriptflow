@@ -1,13 +1,15 @@
 import {
+  pgEnum,
   pgTable,
   text,
   varchar,
   timestamp,
   uuid,
-  pgEnum,
+  integer,
+  boolean,
   index,
   foreignKey,
-  integer,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const SCRIPT_STATUS_ENUM = pgEnum("script_status", [
@@ -62,13 +64,13 @@ export const scripts = pgTable(
     content: text("content").notNull(),
     status: SCRIPT_STATUS_ENUM("status").notNull().default("DRAFT"),
     scriptType: SCRIPT_TYPE_ENUM("script_type"),
-    videoTitle: text("video_title"),
     description: text("description"),
     tags: text("tags"),
     estimatedDuration: integer("estimated_duration"),
     targetPublishDate: timestamp("target_publish_date", { withTimezone: true }),
     thumbnailNotes: text("thumbnail_notes"),
     wordCount: integer("word_count"),
+    shareToken: text("share_token").unique(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -103,3 +105,129 @@ export const scriptStatus = SCRIPT_STATUS_ENUM.enumValues;
 export type ScriptStatus = (typeof scriptStatus)[number];
 export const scriptType = SCRIPT_TYPE_ENUM.enumValues;
 export type ScriptType = (typeof scriptType)[number];
+
+// Keep Task type alias for backward compatibility during migration
+export const COLLABORATOR_ROLE_ENUM = pgEnum("collaborator_role", [
+  "VIEWER",
+  "EDITOR",
+]);
+
+export const scriptCollaborators = pgTable(
+  "script_collaborators",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    scriptId: uuid("script_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    role: COLLABORATOR_ROLE_ENUM("role").notNull().default("VIEWER"),
+    invitedAt: timestamp("invited_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    scriptFk: foreignKey({
+      columns: [table.scriptId],
+      foreignColumns: [scripts.id],
+      name: "sc_script_id_fk",
+    }).onDelete("cascade"),
+    userFk: foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: "sc_user_id_fk",
+    }).onDelete("cascade"),
+    scriptUserUnique: unique("sc_script_user_unique").on(
+      table.scriptId,
+      table.userId,
+    ),
+    scriptIdIdx: index("sc_script_id_idx").on(table.scriptId),
+    userIdIdx: index("sc_user_id_idx").on(table.userId),
+  }),
+);
+
+export type CollaboratorRole = "VIEWER" | "EDITOR";
+
+export const scriptVersions = pgTable(
+  "script_versions",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    scriptId: uuid("script_id").notNull(),
+    savedBy: uuid("saved_by").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    scriptFk: foreignKey({
+      columns: [table.scriptId],
+      foreignColumns: [scripts.id],
+      name: "sv_script_id_fk",
+    }).onDelete("cascade"),
+    userFk: foreignKey({
+      columns: [table.savedBy],
+      foreignColumns: [users.id],
+      name: "sv_saved_by_fk",
+    }).onDelete("cascade"),
+    scriptIdIdx: index("sv_script_id_idx").on(table.scriptId),
+  }),
+);
+
+export type ScriptVersion = typeof scriptVersions.$inferSelect;
+
+export const scriptComments = pgTable(
+  "script_comments",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    scriptId: uuid("script_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    scriptFk: foreignKey({
+      columns: [table.scriptId],
+      foreignColumns: [scripts.id],
+      name: "scom_script_id_fk",
+    }).onDelete("cascade"),
+    userFk: foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: "scom_user_id_fk",
+    }).onDelete("cascade"),
+    scriptIdIdx: index("scom_script_id_idx").on(table.scriptId),
+  }),
+);
+
+export const NOTIFICATION_TYPE_ENUM = pgEnum("notification_type", [
+  "COMMENT_ADDED",
+  "COLLABORATOR_ADDED",
+  "STATUS_CHANGED",
+]);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").notNull().primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    type: NOTIFICATION_TYPE_ENUM("type").notNull(),
+    message: text("message").notNull(),
+    scriptId: uuid("script_id"),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userFk: foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: "notif_user_id_fk",
+    }).onDelete("cascade"),
+    userIdIdx: index("notif_user_id_idx").on(table.userId),
+    readIdx: index("notif_read_idx").on(table.userId, table.read),
+  }),
+);
+
+export type Notification = typeof notifications.$inferSelect;

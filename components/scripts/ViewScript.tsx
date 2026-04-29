@@ -4,13 +4,28 @@ import { Button } from "@/components/ui/button";
 import { Editor } from "@/components/ui/editor";
 import { ArrowLeft, Video, Calendar, Tag, Image } from "lucide-react";
 import { DeleteScriptButton } from "./DeleteScriptButton";
+import { CollaboratorsPanel } from "./CollaboratorsPanel";
+import { CommentsPanel } from "./CommentsPanel";
+import { SharePanel } from "./SharePanel";
 import { format } from "date-fns";
 import Link from "next/link";
 import { ScriptEditorLayout } from "./ScriptEditorLayout";
 import { Badge } from "@/components/ui/badge";
-import type { Script, ScriptStatus } from "@/db/schema";
+import type {
+  Script,
+  ScriptStatus,
+  CollaboratorRole,
+  ScriptVersion,
+} from "@/db/schema";
 import { Separator } from "@/components/ui/separator";
 import { Pencil } from "lucide-react";
+
+interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  role: CollaboratorRole;
+}
 
 interface Comment {
   id: string;
@@ -23,6 +38,9 @@ interface Comment {
 interface ViewScriptProps {
   script: Script;
   userName: string;
+  role: "owner" | "editor" | "viewer";
+  collaborators?: Collaborator[];
+  versions?: ScriptVersion[];
   comments?: Comment[];
   currentUserId: string;
 }
@@ -33,7 +51,16 @@ function getStatusLabel(status: ScriptStatus) {
   return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
 }
 
-export default function ViewScript({ script }: ViewScriptProps) {
+export default function ViewScript({
+  script,
+  role,
+  collaborators = [],
+  versions = [],
+  comments = [],
+  currentUserId,
+}: ViewScriptProps) {
+  const canEdit = role === "owner" || role === "editor";
+
   const Sidebar = (
     <div className="space-y-6 text-sm">
       <div className="space-y-3">
@@ -61,9 +88,10 @@ export default function ViewScript({ script }: ViewScriptProps) {
 
       <div className="space-y-3">
         <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Video className="h-4 w-4" /> Video Title
+          <Video className="h-4 w-4" />
+          Title
         </h4>
-        <p className="text-gray-600">{script.videoTitle || "Not specified"}</p>
+        <p className="text-gray-600">{script.title || "Not specified"}</p>
       </div>
 
       <Separator />
@@ -121,29 +149,62 @@ export default function ViewScript({ script }: ViewScriptProps) {
             : "Not set"}
         </p>
       </div>
+
+      {role === "owner" && (
+        <>
+          <Separator />
+          <SharePanel
+            scriptId={script.id}
+            initialToken={script.shareToken ?? null}
+          />
+          <Separator />
+          <CollaboratorsPanel
+            scriptId={script.id}
+            collaborators={collaborators}
+          />
+        </>
+      )}
+
+      {/*TODO: Fix versioning*/}
+      {/*<Separator />*/}
+      {/*<VersionHistoryPanel*/}
+      {/*  scriptId={script.id}*/}
+      {/*  versions={versions}*/}
+      {/*  canEdit={canEdit}*/}
+      {/*/>*/}
+
+      <Separator />
+      <CommentsPanel
+        scriptId={script.id}
+        initialComments={comments}
+        currentUserId={currentUserId}
+        isOwner={role === "owner"}
+      />
     </div>
   );
 
   const HeaderArea = (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-        <Link href="/" className="shrink-0">
-          <Button variant="ghost" size="icon">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Link href="/">
+          <Button aria-label="back" variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-xl font-bold text-gray-900 truncate">
+        <h1 className="text-xl font-bold text-gray-900 truncate max-w-100">
           {script.title}
         </h1>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link href={`/scripts/${script.id}/edit`}>
-          <Button variant="outline" size="sm">
-            <Pencil className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
-        </Link>
-        <DeleteScriptButton taskId={script.id} />
+      <div className="flex items-center gap-2">
+        {canEdit && (
+          <Link href={`/scripts/${script.id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
+        )}
+        {role === "owner" && <DeleteScriptButton taskId={script.id} />}
       </div>
     </div>
   );

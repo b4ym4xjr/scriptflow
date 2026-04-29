@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getScriptById } from "@/actions/scripts";
+import { getScriptCollaborators } from "@/actions/collaborators";
 import { ScriptForm } from "@/components/scripts/ScriptForm";
 
 export default async function EditTaskPage({
@@ -16,9 +17,11 @@ export default async function EditTaskPage({
   const { id } = await params;
   const result = await getScriptById(id);
 
-  if (!result) {
+  if (!result || result.role === "viewer") {
     redirect(`/scripts/${id}`);
   }
 
-  return <ScriptForm task={result.script} />;
+  const collaborators = result.role === "owner" ? await getScriptCollaborators(id) : [];
+
+  return <ScriptForm task={result.script} role={result.role} collaborators={collaborators} />;
 }

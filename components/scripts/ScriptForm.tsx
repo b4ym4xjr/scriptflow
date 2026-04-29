@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover";
 import type { Script } from "@/db/schema";
 import { ScriptEditorLayout } from "./ScriptEditorLayout";
+import { CollaboratorsPanel } from "./CollaboratorsPanel";
 
 const scriptSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -56,7 +57,6 @@ const scriptSchema = z.object({
       "OTHER",
     ])
     .optional(),
-  videoTitle: z.string().optional(),
   description: z.string().optional(),
   tags: z.string().optional(),
   targetPublishDate: z.string().optional(),
@@ -71,11 +71,24 @@ function formatDateForInput(date: Date | null | undefined): string {
   return d.toISOString().split("T")[0];
 }
 
-interface ScriptFormProps {
-  task?: Script;
+interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  role: "VIEWER" | "EDITOR";
 }
 
-export function ScriptForm({ task }: ScriptFormProps) {
+interface ScriptFormProps {
+  task?: Script;
+  role?: "owner" | "editor";
+  collaborators?: Collaborator[];
+}
+
+export function ScriptForm({
+  task,
+  role,
+  collaborators = [],
+}: ScriptFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [content, setContent] = useState(task?.content || "");
@@ -89,7 +102,7 @@ export function ScriptForm({ task }: ScriptFormProps) {
   } = useForm<ScriptFormData>({
     resolver: zodResolver(scriptSchema),
     defaultValues: {
-      title: task?.videoTitle || task?.title || "",
+      title: task?.title || "",
       content: task?.content || "",
       status: task?.status || "DRAFT",
       scriptType: task?.scriptType || undefined,
@@ -114,7 +127,6 @@ export function ScriptForm({ task }: ScriptFormProps) {
       formData.append("content", content);
       formData.append("status", data.status);
       if (data.scriptType) formData.append("scriptType", data.scriptType);
-      if (data.videoTitle) formData.append("videoTitle", data.videoTitle);
       if (data.description) formData.append("description", data.description);
       if (data.tags) formData.append("tags", data.tags);
       if (data.targetPublishDate)
@@ -188,7 +200,7 @@ export function ScriptForm({ task }: ScriptFormProps) {
           <SelectTrigger>
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
-          <SelectContent className="p-2">
+          <SelectContent>
             <SelectItem value="TUTORIAL">Tutorial</SelectItem>
             <SelectItem value="REVIEW">Review</SelectItem>
             <SelectItem value="VLOG">Vlog</SelectItem>
@@ -199,8 +211,9 @@ export function ScriptForm({ task }: ScriptFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="title">Video Title</Label>
+        <Label htmlFor="title">Title</Label>
         <Input
+          aria-label="Title"
           id="title"
           {...register("title")}
           className={
@@ -216,6 +229,7 @@ export function ScriptForm({ task }: ScriptFormProps) {
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
+          aria-label="Video Description"
           id="description"
           {...register("description")}
           placeholder="Video description"
@@ -226,6 +240,7 @@ export function ScriptForm({ task }: ScriptFormProps) {
       <div className="space-y-2">
         <Label htmlFor="tags">Tags</Label>
         <Input
+          aria-label="Tags"
           id="tags"
           {...register("tags")}
           placeholder="comma, separated, tags"
@@ -235,6 +250,7 @@ export function ScriptForm({ task }: ScriptFormProps) {
       <div className="space-y-2">
         <Label htmlFor="thumbnailNotes">Thumbnail Idea</Label>
         <Textarea
+          aria-label="Thumbnail Idea"
           id="thumbnailNotes"
           {...register("thumbnailNotes")}
           placeholder="Thumbnail concept"
@@ -277,24 +293,35 @@ export function ScriptForm({ task }: ScriptFormProps) {
           </PopoverContent>
         </Popover>
       </div>
+
+      {task && role === "owner" && (
+        <>
+          <div className="border-t pt-6">
+            <CollaboratorsPanel
+              scriptId={task.id}
+              collaborators={collaborators}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 
   const HeaderArea = (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-        <Link href="/" className="shrink-0">
-          <Button variant="ghost" size="icon">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Link href="/">
+          <Button aria-label="back" variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex flex-col min-w-0">
-          <h1 className="text-lg font-semibold text-gray-900 truncate">
+        <div className="flex flex-col">
+          <h1 className="text-lg font-semibold text-gray-900 truncate max-w-75 sm:max-w-100">
             {watch("title") || "Untitled Script"}
           </h1>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2">
         <Button
           onClick={handleSubmit(onSubmit, (errors) => {
             console.error("Form validation errors:", errors);
@@ -306,8 +333,8 @@ export function ScriptForm({ task }: ScriptFormProps) {
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              <Save className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Save</span>
+              <Save className="h-4 w-4 mr-2" />
+              Save
             </>
           )}
         </Button>

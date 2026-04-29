@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface HeaderProps {
   name: string;
@@ -17,15 +18,11 @@ export function Header({ name }: HeaderProps) {
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">
               ScriptFlow
             </h1>
-          </div>{" "}
-          <p className="text-xs sm:text-sm text-gray-500">Welcome, {name}</p>
+          </div>    <p className="text-xs sm:text-sm text-gray-500">Welcome, {name}</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            onClick={() => signOut()}
-            className="flex-1 sm:flex-none"
-          >
+          <NotificationBell />
+          <Button variant="outline" onClick={() => signOut()} className="flex-1 sm:flex-none">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>

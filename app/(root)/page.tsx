@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { getScripts } from "@/actions/scripts";
+import { getMyCollaborations } from "@/actions/collaborators";
 import { Header } from "@/components/Header";
 import { ScriptCard } from "@/components/scripts/ScriptCard";
-import { Button } from "@/components/ui/button";
-import { Plus, FileText } from "lucide-react";
-import type { ScriptStatus, ScriptType } from "@/db/schema";
-import { Suspense } from "react";
 import { SearchFilter } from "@/components/SearchFilter";
+import { Button } from "@/components/ui/button";
+import { Plus, FileText, Users } from "lucide-react";
+import type { ScriptStatus, ScriptType } from "@/db/schema";
 
 interface HomePageProps {
   searchParams: Promise<{ q?: string; status?: string; type?: string }>;
@@ -20,12 +21,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const { q, status, type } = await searchParams;
 
-  const [scripts] = await Promise.all([
+  const [scripts, collaborations] = await Promise.all([
     getScripts({
       q: q || undefined,
       status: status as ScriptStatus | undefined,
       scriptType: type as ScriptType | undefined,
     }),
+    getMyCollaborations(),
   ]);
 
   return (
@@ -59,7 +61,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-            {scripts.length === 0 ? (
+            {scripts.length === 0 && collaborations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                 <div className="bg-gray-100 p-4 rounded-full">
                   <FileText className="h-8 w-8 text-gray-400" />
@@ -89,6 +91,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     {scripts.map((script) => (
                       <ScriptCard key={script.id} script={script} />
                     ))}
+                  </div>
+                )}
+
+                {collaborations.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-gray-500" />
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Shared with me
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {collaborations.map(({ script }) => (
+                        <ScriptCard key={script.id} script={script} isShared />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

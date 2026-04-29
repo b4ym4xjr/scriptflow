@@ -47,7 +47,7 @@ export function DeleteScriptButton({ taskId }: { taskId: string }) {
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 text-red-600 hover:text-red-700 hover:border-red-300"
+          className="gap-2 text-red-600 hover:text-red-700 hover:border-red-300 w-full sm:w-auto min-w-0"
         >
           <Trash2 className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Delete</span>

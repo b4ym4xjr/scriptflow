@@ -22,6 +22,20 @@
       "when": 1776200749767,
       "tag": "0002_chilly_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777424338328,
+      "tag": "0003_green_cable",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777424652161,
+      "tag": "0004_lucky_young_avengers",
+      "breakpoints": true
     }
   ]
 }

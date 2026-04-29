@@ -1,0 +1,1 @@
+ALTER TABLE "scripts" DROP COLUMN "video_title";

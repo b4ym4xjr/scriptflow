@@ -2,10 +2,19 @@
 
 import { z } from "zod";
 import { db } from "@/db/drizzle";
-import { scripts, ScriptStatus, ScriptType } from "@/db/schema";
+import {
+  scripts,
+  scriptCollaborators,
+  scriptVersions,
+  users,
+  ScriptStatus,
+  ScriptType,
+} from "@/db/schema";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { sendStatusChangeEmail } from "@/lib/email";
+import { createNotification } from "@/actions/notifications";
 
 // Helper function to calculate word count from HTML content
 function calculateWordCount(html: string): number {
@@ -49,7 +58,6 @@ const scriptSchema = z.object({
       "OTHER",
     ])
     .optional(),
-  videoTitle: z.string().optional(),
   description: z.string().optional(),
   tags: z.string().optional(),
   estimatedDuration: z.coerce.number().optional(),
@@ -91,12 +99,33 @@ export async function getScriptById(scriptId: string) {
   const script = await db
     .select()
     .from(scripts)
-    .where(and(eq(scripts.id, scriptId), eq(scripts.userId, userId)))
+    .where(eq(scripts.id, scriptId))
     .limit(1);
 
   if (script.length === 0) return null;
 
-  return { script: script[0] };
+  // Owner
+  if (script[0].userId === userId) {
+    return { script: script[0], role: "owner" as const };
+  }
+
+  // Collaborator
+  const collab = await db
+    .select({ role: scriptCollaborators.role })
+    .from(scriptCollaborators)
+    .where(
+      and(
+        eq(scriptCollaborators.scriptId, scriptId),
+        eq(scriptCollaborators.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (collab.length === 0) return null;
+
+  const role =
+    collab[0].role === "EDITOR" ? ("editor" as const) : ("viewer" as const);
+  return { script: script[0], role };
 }
 
 export async function createScript(formData: FormData) {
@@ -112,10 +141,6 @@ export async function createScript(formData: FormData) {
       content: content,
       status: formData.get("status") as ScriptStatus,
       scriptType: (formData.get("scriptType") as ScriptType) || undefined,
-      videoTitle:
-        (formData.get("videoTitle") as string) ||
-        (formData.get("title") as string) ||
-        undefined,
       description: (formData.get("description") as string) || undefined,
       tags: (formData.get("tags") as string) || undefined,
       targetPublishDate:
@@ -135,7 +160,6 @@ export async function createScript(formData: FormData) {
       content: result.data.content || "",
       status: result.data.status,
       scriptType: result.data.scriptType || null,
-      videoTitle: result.data.videoTitle || null,
       description: result.data.description || null,
       tags: result.data.tags || null,
       estimatedDuration: estimatedDuration || null,
@@ -158,13 +182,29 @@ export async function updateScript(scriptId: string, formData: FormData) {
   try {
     const userId = await requireAuth();
 
+    // Check collaborator access if not owner
     const scriptRow = await db
       .select({ userId: scripts.userId })
       .from(scripts)
       .where(eq(scripts.id, scriptId))
       .limit(1);
     if (scriptRow.length === 0) return { error: "Script not found." };
-    if (scriptRow[0].userId !== userId) return { error: "Unauthorized." };
+
+    if (scriptRow[0].userId !== userId) {
+      const collab = await db
+        .select({ role: scriptCollaborators.role })
+        .from(scriptCollaborators)
+        .where(
+          and(
+            eq(scriptCollaborators.scriptId, scriptId),
+            eq(scriptCollaborators.userId, userId),
+          ),
+        )
+        .limit(1);
+      if (collab.length === 0 || collab[0].role !== "EDITOR") {
+        return { error: "You don't have permission to edit this script." };
+      }
+    }
 
     const content = (formData.get("content") as string) || "";
     const wordCount = calculateWordCount(content);
@@ -175,7 +215,6 @@ export async function updateScript(scriptId: string, formData: FormData) {
       content: content,
       status: formData.get("status") as ScriptStatus,
       scriptType: (formData.get("scriptType") as ScriptType) || undefined,
-      videoTitle: (formData.get("title") as string) || undefined,
       description: (formData.get("description") as string) || undefined,
       tags: (formData.get("tags") as string) || undefined,
       targetPublishDate:
@@ -189,6 +228,21 @@ export async function updateScript(scriptId: string, formData: FormData) {
       return { error: result.error.issues[0].message };
     }
 
+    // Save version snapshot before updating
+    const current = await db
+      .select({ title: scripts.title, content: scripts.content })
+      .from(scripts)
+      .where(eq(scripts.id, scriptId))
+      .limit(1);
+    if (current.length > 0) {
+      await db.insert(scriptVersions).values({
+        scriptId,
+        savedBy: userId,
+        title: current[0].title,
+        content: current[0].content,
+      });
+    }
+
     await db
       .update(scripts)
       .set({
@@ -196,7 +250,6 @@ export async function updateScript(scriptId: string, formData: FormData) {
         content: result.data.content || "",
         status: result.data.status,
         scriptType: result.data.scriptType || null,
-        videoTitle: result.data.videoTitle || null,
         description: result.data.description || null,
         tags: result.data.tags || null,
         estimatedDuration: estimatedDuration || null,
@@ -207,7 +260,7 @@ export async function updateScript(scriptId: string, formData: FormData) {
         wordCount: wordCount,
         updatedAt: new Date(),
       })
-      .where(and(eq(scripts.id, scriptId), eq(scripts.userId, userId)));
+      .where(eq(scripts.id, scriptId));
 
     revalidatePath("/");
     revalidatePath(`/scripts/${scriptId}`);
@@ -254,12 +307,57 @@ export async function updateScriptStatus(
       .where(eq(scripts.id, scriptId))
       .limit(1);
     if (scriptRow.length === 0) return { error: "Script not found" };
-    if (scriptRow[0].userId !== userId) return { error: "Unauthorized" };
+
+    if (scriptRow[0].userId !== userId) {
+      const collab = await db
+        .select({ role: scriptCollaborators.role })
+        .from(scriptCollaborators)
+        .where(
+          and(
+            eq(scriptCollaborators.scriptId, scriptId),
+            eq(scriptCollaborators.userId, userId),
+          ),
+        )
+        .limit(1);
+      if (collab.length === 0 || collab[0].role !== "EDITOR") {
+        return { error: "You don't have permission to update this script." };
+      }
+    }
 
     await db
       .update(scripts)
       .set({ status, updatedAt: new Date() })
-      .where(and(eq(scripts.id, scriptId), eq(scripts.userId, userId)));
+      .where(eq(scripts.id, scriptId));
+
+    // Notify collaborators of status change
+    const [scriptInfo, collaborators] = await Promise.all([
+      db
+        .select({ title: scripts.title })
+        .from(scripts)
+        .where(eq(scripts.id, scriptId))
+        .limit(1),
+      db
+        .select({ id: users.id, email: users.email, name: users.name })
+        .from(scriptCollaborators)
+        .innerJoin(users, eq(scriptCollaborators.userId, users.id))
+        .where(eq(scriptCollaborators.scriptId, scriptId)),
+    ]);
+    if (scriptInfo.length > 0 && collaborators.length > 0) {
+      const title = scriptInfo[0].title;
+      await Promise.allSettled(
+        collaborators.map((c) =>
+          Promise.all([
+            sendStatusChangeEmail(c.email, c.name, title, status, scriptId),
+            createNotification(
+              c.id,
+              "STATUS_CHANGED",
+              `"${title}" status changed to ${status.replace(/_/g, " ")}`,
+              scriptId,
+            ),
+          ]),
+        ),
+      );
+    }
 
     revalidatePath("/");
     revalidatePath(`/scripts/${scriptId}`);

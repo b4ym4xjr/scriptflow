@@ -16,6 +16,7 @@ import { DeleteScriptButton } from "./DeleteScriptButton";
 
 interface ScriptCardProps {
   script: Script;
+  isShared?: boolean;
 }
 
 function getStatusColor(status: ScriptStatus) {
@@ -56,7 +57,7 @@ function getStatusLabel(status: ScriptStatus) {
   }
 }
 
-export function ScriptCard({ script }: ScriptCardProps) {
+export function ScriptCard({ script, isShared = false }: ScriptCardProps) {
   // Helper to strip HTML tags for preview using a simple regex for safety/simplicity
   const getPreviewText = (html: string) => {
     if (!html) return "No content";
@@ -69,7 +70,7 @@ export function ScriptCard({ script }: ScriptCardProps) {
       <CardHeader className="p-5 pb-2">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-base font-semibold leading-tight text-gray-900 line-clamp-2">
-            {script.videoTitle || script.title}
+            {script.title}
           </CardTitle>
           <Badge
             variant="outline"
@@ -90,7 +91,7 @@ export function ScriptCard({ script }: ScriptCardProps) {
           {script.description || getPreviewText(script.content)}
         </p>
       </CardContent>
-      <CardFooter className="p-3 flex gap-2">
+      <CardFooter className="p-5 pt-0 flex gap-2">
         <Link href={`/scripts/${script.id}`} className="flex-1">
           <Button
             variant="outline"
@@ -111,10 +112,11 @@ export function ScriptCard({ script }: ScriptCardProps) {
             Edit
           </Button>
         </Link>
-
-        <div className="flex-1">
-          <DeleteScriptButton taskId={script.id} />
-        </div>
+        {!isShared && (
+          <div className="flex-1">
+            <DeleteScriptButton taskId={script.id} />
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
