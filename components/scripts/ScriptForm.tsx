@@ -160,7 +160,7 @@ export function ScriptForm({
   };
 
   const Sidebar = (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="space-y-2">
         <Label htmlFor="status">Status</Label>
         <Select
@@ -233,7 +233,7 @@ export function ScriptForm({
           id="description"
           {...register("description")}
           placeholder="Video description"
-          className="min-h-25"
+          className="min-h-24"
         />
       </div>
 
@@ -276,7 +276,7 @@ export function ScriptForm({
               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
             <Calendar
               mode="single"
               selected={
@@ -316,7 +316,7 @@ export function ScriptForm({
           </Button>
         </Link>
         <div className="flex flex-col">
-          <h1 className="text-lg font-semibold text-gray-900 truncate max-w-75 sm:max-w-100">
+          <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md">
             {watch("title") || "Untitled Script"}
           </h1>
         </div>
@@ -349,7 +349,7 @@ export function ScriptForm({
         onChange={setContent}
         placeholder="Start writing your script..."
         editable={!isSubmitting}
-        className="min-h-[calc(100vh-200px)]"
+        className="min-h-[300px] sm:min-h-[400px] md:min-h-[calc(100vh-200px)]"
       />
     </ScriptEditorLayout>
   );

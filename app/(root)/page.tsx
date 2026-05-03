@@ -87,7 +87,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             ) : (
               <div className="space-y-10">
                 {scripts.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {scripts.map((script) => (
                       <ScriptCard key={script.id} script={script} />
                     ))}
@@ -102,7 +102,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         Shared with me
                       </h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                       {collaborations.map(({ script }) => (
                         <ScriptCard key={script.id} script={script} isShared />
                       ))}

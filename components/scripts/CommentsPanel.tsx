@@ -91,7 +91,7 @@ export function CommentsPanel({
                       {format(new Date(c.createdAt), "MMM d")}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words overflow-hidden">
                     {c.content}
                   </p>
                 </div>
@@ -121,7 +121,7 @@ export function CommentsPanel({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a comment..."
-          className="text-sm resize-none min-h-16 rounded-lg"
+          className="text-sm resize-none min-h-[72px] sm:min-h-16 rounded-lg"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAdd();
           }}
@@ -131,7 +131,7 @@ export function CommentsPanel({
           size="sm"
           onClick={handleAdd}
           disabled={isPending || !text.trim()}
-          className="h-8 px-3 bg-black hover:bg-gray-800 text-white rounded-lg"
+          className="h-9 sm:h-8 px-3 bg-black hover:bg-gray-800 text-white rounded-lg"
         >
           {isPending && !deletingId ? (
             <Loader className="h-3.5 w-3.5 animate-spin" />

@@ -58,9 +58,10 @@ export function SearchFilter() {
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
-      <div className="relative flex-1 min-w-48">
+      <div className="relative w-full sm:flex-1 sm:min-w-48 sm:w-auto">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         <Input
+          aria-label="search scripts"
           placeholder="Search scripts..."
           defaultValue={q}
           onChange={(e) => updateParam("q", e.target.value)}
@@ -72,7 +73,7 @@ export function SearchFilter() {
         value={status}
         onValueChange={(v) => updateParam("status", v === "ALL" ? "" : v)}
       >
-        <SelectTrigger className="h-9 text-sm rounded-lg w-40">
+        <SelectTrigger className="h-9 text-sm rounded-lg flex-1 sm:flex-none sm:w-40">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent className="p-2">
@@ -89,7 +90,7 @@ export function SearchFilter() {
         value={scriptType}
         onValueChange={(v) => updateParam("type", v === "ALL" ? "" : v)}
       >
-        <SelectTrigger className="h-9 text-sm rounded-lg w-36">
+        <SelectTrigger className="h-9 text-sm rounded-lg flex-1 sm:flex-none sm:w-36">
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent className="p-2">

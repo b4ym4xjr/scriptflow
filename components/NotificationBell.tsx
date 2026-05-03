@@ -36,7 +36,12 @@ export function NotificationBell() {
   return (
     <DropdownMenu open={open} onOpenChange={handleOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button
+          aria-label="notifications"
+          variant="outline"
+          size="icon"
+          className="relative"
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -45,13 +50,18 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0">
+      <DropdownMenuContent
+        align="end"
+        className="w-[calc(100vw-2rem)] sm:w-80 max-w-80 p-0"
+      >
         <div className="px-4 py-3 border-b">
           <p className="text-sm font-semibold text-gray-900">Notifications</p>
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifs.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No notifications</p>
+            <p className="text-sm text-gray-400 text-center py-8">
+              No notifications
+            </p>
           ) : (
             notifs.map((n) => (
               <div

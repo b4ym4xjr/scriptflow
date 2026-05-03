@@ -91,25 +91,25 @@ export function ScriptCard({ script, isShared = false }: ScriptCardProps) {
           {script.description || getPreviewText(script.content)}
         </p>
       </CardContent>
-      <CardFooter className="p-5 pt-0 flex gap-2">
+      <CardFooter className="px-2 py-2 flex gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
         <Link href={`/scripts/${script.id}`} className="flex-1">
           <Button
             variant="outline"
             size="sm"
-            className="w-full gap-2 text-gray-700"
+            className="w-full gap-1.5 sm:gap-2 text-gray-700 h-9 sm:h-8"
           >
             <Eye className="h-4 w-4" />
-            View
+            <span className="hidden xs:inline sm:inline">View</span>
           </Button>
         </Link>
         <Link href={`/scripts/${script.id}/edit`} className="flex-1">
           <Button
             variant="outline"
             size="sm"
-            className="w-full gap-2 text-gray-700"
+            className="w-full gap-1.5 sm:gap-2 text-gray-700 h-9 sm:h-8"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            <span className="hidden xs:inline sm:inline">Edit</span>
           </Button>
         </Link>
         {!isShared && (

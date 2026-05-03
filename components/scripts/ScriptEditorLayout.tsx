@@ -67,7 +67,7 @@ export function ScriptEditorLayout({
 
         {/* Sidebar */}
         <aside
-          className={`md:w-87.5 w-full bg-gray-50 flex flex-col border-l shrink-0 ${
+          className={`md:w-72 lg:w-87.5 w-full bg-gray-50 flex flex-col border-l shrink-0 ${
             activeTab === "content" ? "hidden md:flex" : "flex"
           }`}
         >
@@ -75,7 +75,7 @@ export function ScriptEditorLayout({
             Video Details
           </div>
           <ScrollArea className="flex-1 overflow-auto">
-            <div className="p-4 space-y-6">{sidebar}</div>
+            <div className="p-4 space-y-4 md:space-y-6">{sidebar}</div>
           </ScrollArea>
         </aside>
       </div>

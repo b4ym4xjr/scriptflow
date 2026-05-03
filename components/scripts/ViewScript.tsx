@@ -62,7 +62,7 @@ export default function ViewScript({
   const canEdit = role === "owner" || role === "editor";
 
   const Sidebar = (
-    <div className="space-y-6 text-sm">
+    <div className="space-y-4 md:space-y-6 text-sm">
       <div className="space-y-3">
         <h4 className="font-medium text-gray-900">Status</h4>
         <div className="flex flex-col gap-2">
@@ -81,7 +81,7 @@ export default function ViewScript({
         <h4 className="font-medium text-gray-900 flex items-center gap-2">
           <Tag className="h-4 w-4" /> Type
         </h4>
-        <p className="text-gray-600">{script.scriptType || "Not specified"}</p>
+        <p className="text-gray-600 break-words">{script.scriptType || "Not specified"}</p>
       </div>
 
       <Separator />
@@ -91,14 +91,14 @@ export default function ViewScript({
           <Video className="h-4 w-4" />
           Title
         </h4>
-        <p className="text-gray-600">{script.title || "Not specified"}</p>
+        <p className="text-gray-600 break-words">{script.title || "Not specified"}</p>
       </div>
 
       <Separator />
 
       <div className="space-y-3">
         <h4 className="font-medium text-gray-900">Description</h4>
-        <p className="text-gray-600 whitespace-pre-wrap">
+        <p className="text-gray-600 whitespace-pre-wrap break-words overflow-hidden">
           {script.description || "No description"}
         </p>
       </div>
@@ -132,7 +132,7 @@ export default function ViewScript({
         <h4 className="font-medium text-gray-900 flex items-center gap-2">
           <Image className="h-4 w-4" /> Thumbnail Idea
         </h4>
-        <p className="text-gray-600 whitespace-pre-wrap">
+        <p className="text-gray-600 whitespace-pre-wrap break-words overflow-hidden">
           {script.thumbnailNotes || "No notes"}
         </p>
       </div>
@@ -191,7 +191,7 @@ export default function ViewScript({
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-xl font-bold text-gray-900 truncate max-w-100">
+        <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md">
           {script.title}
         </h1>
       </div>
@@ -211,7 +211,7 @@ export default function ViewScript({
 
   return (
     <ScriptEditorLayout header={HeaderArea} sidebar={Sidebar}>
-      <div className="mb-4 flex items-center gap-4 text-xs text-gray-500 font-mono">
+      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500 font-mono">
         {script.wordCount && <span>{script.wordCount} words</span>}
         {script.estimatedDuration && (
           <span>~{script.estimatedDuration} min read</span>
@@ -221,7 +221,7 @@ export default function ViewScript({
         content={script.content}
         onChange={() => {}}
         editable={false}
-        className="min-h-[calc(100vh-250px)]"
+        className="min-h-[300px] sm:min-h-[400px] md:min-h-[calc(100vh-250px)]"
       />
     </ScriptEditorLayout>
   );

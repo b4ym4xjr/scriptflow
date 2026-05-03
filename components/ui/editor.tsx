@@ -72,13 +72,13 @@ export function Editor({
   return (
     <div className="border rounded-lg focus-within:ring-2 focus-within:ring-black focus-within:border-black h-200 flex flex-col overflow-hidden">
       {editable && (
-        <div className="border-b bg-gray-50 p-2 flex gap-1 flex-wrap sticky top-0 z-10 shrink-0">
+        <div className="border-b bg-gray-50 p-1.5 sm:p-2 flex gap-0.5 sm:gap-1 flex-wrap sticky top-0 z-10 shrink-0">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
             disabled={!editor.can().chain().focus().toggleBold().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("bold") && "bg-gray-200",
             )}
           >
@@ -89,7 +89,7 @@ export function Editor({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             disabled={!editor.can().chain().focus().toggleItalic().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("italic") && "bg-gray-200",
             )}
           >
@@ -100,7 +100,7 @@ export function Editor({
             onClick={() => editor.chain().focus().toggleStrike().run()}
             disabled={!editor.can().chain().focus().toggleStrike().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("strike") && "bg-gray-200",
             )}
           >
@@ -113,7 +113,7 @@ export function Editor({
               editor.chain().focus().toggleHeading({ level: 1 }).run()
             }
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("heading", { level: 1 }) && "bg-gray-200",
             )}
           >
@@ -125,7 +125,7 @@ export function Editor({
               editor.chain().focus().toggleHeading({ level: 2 }).run()
             }
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("heading", { level: 2 }) && "bg-gray-200",
             )}
           >
@@ -137,7 +137,7 @@ export function Editor({
               editor.chain().focus().toggleHeading({ level: 3 }).run()
             }
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("heading", { level: 3 }) && "bg-gray-200",
             )}
           >
@@ -148,7 +148,7 @@ export function Editor({
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("bulletList") && "bg-gray-200",
             )}
           >
@@ -158,7 +158,7 @@ export function Editor({
             type="button"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("orderedList") && "bg-gray-200",
             )}
           >
@@ -168,7 +168,7 @@ export function Editor({
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
-              "px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors",
+              "px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]",
               editor.isActive("blockquote") && "bg-gray-200",
             )}
           >
@@ -178,7 +178,7 @@ export function Editor({
           <button
             type="button"
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            className="px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
+            className="px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px]"
           >
             ─
           </button>
@@ -186,7 +186,7 @@ export function Editor({
             type="button"
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().chain().focus().undo().run()}
-            className="px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px] disabled:opacity-50"
           >
             ↶
           </button>
@@ -194,7 +194,7 @@ export function Editor({
             type="button"
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().chain().focus().redo().run()}
-            className="px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="px-2 sm:px-3 py-1.5 text-sm font-medium rounded hover:bg-gray-200 transition-colors min-h-[36px] sm:min-h-[40px] disabled:opacity-50"
           >
             ↷
           </button>
