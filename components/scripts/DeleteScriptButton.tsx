@@ -16,7 +16,13 @@ import {
 import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function DeleteScriptButton({ taskId }: { taskId: string }) {
+export function DeleteScriptButton({
+  taskId,
+  iconOnly = false,
+}: {
+  taskId: string;
+  iconOnly?: boolean;
+}) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -44,14 +50,25 @@ export function DeleteScriptButton({ taskId }: { taskId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 text-red-600 hover:text-red-700 hover:border-red-300 w-full sm:w-auto min-w-0"
-        >
-          <Trash2 className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Delete</span>
-        </Button>
+        {iconOnly ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete script"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/40 w-full sm:w-auto min-w-0"
+          >
+            <Trash2 className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

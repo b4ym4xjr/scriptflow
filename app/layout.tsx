@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ReactNode } from "react";
 import { Providers } from "@/components/Providers";
+import { themeInitScript } from "@/components/ThemeProvider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -17,9 +18,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "ScriptFlow",
-  description: "Task Management Platform",
+  title: {
+    default: "ScriptFlow — script to screen, in flow",
+    template: "%s · ScriptFlow",
+  },
+  description:
+    "Write video scripts, move them through your production pipeline, collaborate with your team and ship faster.",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#131311" },
+  ],
 };
 
 export default async function RootLayout({
@@ -28,11 +45,24 @@ export default async function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="antialiased">
         <Providers>
           <main className="min-h-screen w-full flex flex-col">{children}</main>
-          <Toaster richColors={true} duration={2000} position={"top-center"} />
+          <Toaster
+            richColors
+            closeButton
+            duration={2500}
+            position="top-center"
+            toastOptions={{ className: "font-sans" }}
+          />
         </Providers>
         <Analytics />
         <SpeedInsights />

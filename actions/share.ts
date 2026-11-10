@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db/drizzle";
 import { scripts } from "@/db/schema";
-import { generateToken } from "@/lib/tokens";
+import { generateToken, isTokenFormat } from "@/lib/tokens";
 
 async function requireOwner(scriptId: string) {
   const session = await auth();
@@ -35,7 +35,24 @@ export async function revokeShareLink(scriptId: string) {
   return { success: true };
 }
 
+/**
+ * Public (token-gated) read. Returns only what the share page renders —
+ * never the owner's user id, the token itself, or internal columns.
+ */
 export async function getScriptByShareToken(token: string) {
-  const result = await db.select().from(scripts).where(eq(scripts.shareToken, token)).limit(1);
+  if (!isTokenFormat(token)) return null;
+  const result = await db
+    .select({
+      title: scripts.title,
+      content: scripts.content,
+      status: scripts.status,
+      description: scripts.description,
+      wordCount: scripts.wordCount,
+      estimatedDuration: scripts.estimatedDuration,
+      targetPublishDate: scripts.targetPublishDate,
+    })
+    .from(scripts)
+    .where(eq(scripts.shareToken, token))
+    .limit(1);
   return result[0] ?? null;
 }

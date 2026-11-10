@@ -14,7 +14,9 @@ import { and, desc, eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { sendStatusChangeEmail } from "@/lib/email";
-import { createNotification } from "@/actions/notifications";
+import { LIMITS } from "@/lib/validations";
+import { isUuid } from "@/lib/tokens";
+import { createNotification } from "@/lib/notifications";
 
 // Helper function to calculate word count from HTML content
 function calculateWordCount(html: string): number {
@@ -34,20 +36,30 @@ function estimateDuration(wordCount: number): number {
   return Math.ceil(wordCount / 150);
 }
 
+const statusEnum = z.enum([
+  "DRAFT",
+  "WRITING",
+  "REVIEW",
+  "READY_TO_FILM",
+  "FILMING",
+  "EDITING",
+  "READY_TO_PUBLISH",
+  "PUBLISHED",
+  "ARCHIVED",
+]);
+
+// Server actions are public endpoints: every field gets a type AND a size limit.
 const scriptSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().optional(),
-  status: z.enum([
-    "DRAFT",
-    "WRITING",
-    "REVIEW",
-    "READY_TO_FILM",
-    "FILMING",
-    "EDITING",
-    "READY_TO_PUBLISH",
-    "PUBLISHED",
-    "ARCHIVED",
-  ]),
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required")
+    .max(LIMITS.title, `Title must be at most ${LIMITS.title} characters`),
+  content: z
+    .string()
+    .max(LIMITS.content, "Script is too long")
+    .optional(),
+  status: statusEnum,
   scriptType: z
     .enum([
       "TUTORIAL",
@@ -58,12 +70,23 @@ const scriptSchema = z.object({
       "OTHER",
     ])
     .optional(),
-  description: z.string().optional(),
-  tags: z.string().optional(),
+  description: z.string().max(LIMITS.description, "Description is too long").optional(),
+  tags: z.string().max(LIMITS.tags, "Tags are too long").optional(),
   estimatedDuration: z.coerce.number().optional(),
-  targetPublishDate: z.string().optional(),
-  thumbnailNotes: z.string().optional(),
+  targetPublishDate: z
+    .string()
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid target date")
+    .optional(),
+  thumbnailNotes: z
+    .string()
+    .max(LIMITS.thumbnailNotes, "Thumbnail notes are too long")
+    .optional(),
 });
+
+/** Escape LIKE wildcards so user text is matched literally. */
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
 
 async function requireAuth() {
   const session = await auth();
@@ -81,7 +104,8 @@ export async function getScripts(params?: {
   const userId = await requireAuth();
 
   const conditions = [eq(scripts.userId, userId)];
-  if (params?.q) conditions.push(ilike(scripts.title, `%${params.q}%`));
+  if (params?.q)
+    conditions.push(ilike(scripts.title, `%${escapeLike(params.q.slice(0, 200))}%`));
   if (params?.status) conditions.push(eq(scripts.status, params.status));
   if (params?.scriptType)
     conditions.push(eq(scripts.scriptType, params.scriptType));
@@ -95,6 +119,7 @@ export async function getScripts(params?: {
 
 export async function getScriptById(scriptId: string) {
   const userId = await requireAuth();
+  if (!isUuid(scriptId)) return null;
 
   const script = await db
     .select()
@@ -125,7 +150,8 @@ export async function getScriptById(scriptId: string) {
 
   const role =
     collab[0].role === "EDITOR" ? ("editor" as const) : ("viewer" as const);
-  return { script: script[0], role };
+  // The public share token is the owner's to hand out; collaborators don't get it.
+  return { script: { ...script[0], shareToken: null }, role };
 }
 
 export async function createScript(formData: FormData) {
@@ -300,6 +326,9 @@ export async function updateScriptStatus(
 ) {
   try {
     const userId = await requireAuth();
+    if (!isUuid(scriptId) || !statusEnum.safeParse(status).success) {
+      return { error: "Invalid request" };
+    }
 
     const scriptRow = await db
       .select({ userId: scripts.userId })

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Link2, Link2Off, Copy, Check, Loader } from "lucide-react";
+import { Link2, Link2Off, Copy, Check, Loader, Globe } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { generateShareLink, revokeShareLink } from "@/actions/share";
+import { PanelTitle } from "./PanelTitle";
 
 interface Props {
   scriptId: string;
@@ -44,70 +46,94 @@ export function SharePanel({ scriptId, initialToken }: Props) {
     if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
+    toast.success("Link copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="space-y-3">
-      <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
-        <Link2 className="h-4 w-4" />
-        Public Share Link
-      </h4>
+      <PanelTitle icon={Link2}>Public Share Link</PanelTitle>
 
-      {shareUrl ? (
-        <div className="space-y-2">
-          <div className="flex gap-1.5">
-            <Input
-              aria-label="Share link"
-              readOnly
-              value={shareUrl}
-              className="h-8 text-xs rounded-lg flex-1"
-            />
+      <AnimatePresence mode="wait" initial={false}>
+        {shareUrl ? (
+          <motion.div
+            key="on"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="space-y-2"
+          >
+            <p className="flex items-center gap-1.5 text-xs text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              Live — anyone with the link can read
+            </p>
+            <div className="flex gap-1.5">
+              <Input
+                aria-label="Share link"
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                className="h-8 flex-1 rounded-lg text-xs"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-lg px-2"
+                onClick={handleCopy}
+                aria-label="Copy link"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+            <button
+              onClick={handleRevoke}
+              disabled={isPending}
+              className="flex items-center gap-1 text-xs text-destructive transition-opacity hover:opacity-70"
+            >
+              {isPending ? (
+                <Loader className="h-3 w-3 animate-spin" />
+              ) : (
+                <Link2Off className="h-3 w-3" />
+              )}
+              Revoke link
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="off"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="space-y-2"
+          >
+            <p className="text-xs text-muted-foreground">
+              Create a read-only link — no account needed to view.
+            </p>
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 px-2 rounded-lg"
-              onClick={handleCopy}
+              onClick={handleGenerate}
+              disabled={isPending}
+              className="h-8 gap-1.5 rounded-lg bg-primary px-3 text-xs text-primary-foreground hover:opacity-90"
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-green-500" />
+              {isPending ? (
+                <Loader className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Copy className="h-3.5 w-3.5" />
+                <>
+                  <Globe className="h-3.5 w-3.5" />
+                  Create share link
+                </>
               )}
             </Button>
-          </div>
-          <button
-            onClick={handleRevoke}
-            disabled={isPending}
-            className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition-colors"
-          >
-            {isPending ? (
-              <Loader className="h-3 w-3 animate-spin" />
-            ) : (
-              <Link2Off className="h-3 w-3" />
-            )}
-            Revoke link
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          <p className="text-xs text-gray-400">
-            Anyone with the link can view this script.
-          </p>
-          <Button
-            size="sm"
-            onClick={handleGenerate}
-            disabled={isPending}
-            className="h-8 px-3 bg-black hover:bg-gray-800 text-white rounded-lg text-xs"
-          >
-            {isPending ? (
-              <Loader className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              "Create share link"
-            )}
-          </Button>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

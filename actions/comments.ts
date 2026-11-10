@@ -11,7 +11,9 @@ import {
   users,
 } from "@/db/schema";
 import { sendCommentNotificationEmail } from "@/lib/email";
-import { createNotification } from "@/actions/notifications";
+import { createNotification } from "@/lib/notifications";
+import { rateLimit } from "@/lib/rate-limit";
+import { LIMITS } from "@/lib/validations";
 
 async function requireAuth() {
   const session = await auth();
@@ -64,9 +66,15 @@ async function canComment(scriptId: string, userId: string) {
 
 export async function addComment(scriptId: string, content: string) {
   const userId = await requireAuth();
+  if (typeof content !== "string") return { error: "Invalid comment." };
   if (!(await canComment(scriptId, userId)))
     return { error: "Permission denied." };
   if (!content.trim()) return { error: "Comment cannot be empty." };
+  if (content.length > LIMITS.comment)
+    return { error: `Comments are limited to ${LIMITS.comment} characters.` };
+  // Each comment can trigger an email + notification to the owner.
+  if (!rateLimit(`comment:${userId}`, 20, 60 * 1000).ok)
+    return { error: "You're commenting too quickly. Please wait a moment." };
 
   const [inserted] = await db
     .insert(scriptComments)

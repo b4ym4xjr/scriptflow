@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { UserPlus, X, Loader } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -16,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { addCollaborator, removeCollaborator } from "@/actions/collaborators";
 import type { CollaboratorRole } from "@/db/schema";
+import { cn } from "@/lib/utils";
+import { Avatar, PanelTitle } from "./PanelTitle";
 
 interface Collaborator {
   id: string;
@@ -69,21 +70,19 @@ export function CollaboratorsPanel({
 
   return (
     <div className="space-y-4">
-      <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
-        <UserPlus className="h-4 w-4" />
+      <PanelTitle icon={UserPlus} count={collaborators.length}>
         Collaborators
-      </h4>
+      </PanelTitle>
 
-      {/* Add collaborator form */}
       <div className="space-y-2">
         <Input
           aria-label="Add collaborator email"
           type="email"
-          placeholder="Email address"
+          placeholder="teammate@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          className="h-9 text-sm rounded-lg"
+          className="h-9 rounded-lg text-sm"
           disabled={isPending}
         />
         <div className="flex gap-2">
@@ -92,7 +91,7 @@ export function CollaboratorsPanel({
             onValueChange={(v) => setRole(v as CollaboratorRole)}
             disabled={isPending}
           >
-            <SelectTrigger className="h-9 text-sm rounded-lg flex-1">
+            <SelectTrigger className="h-9 flex-1 rounded-lg text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="p-2">
@@ -104,44 +103,52 @@ export function CollaboratorsPanel({
             size="sm"
             onClick={handleAdd}
             disabled={isPending || !email.trim()}
-            className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-white"
+            className="h-9 rounded-lg bg-primary px-4 text-primary-foreground hover:opacity-90"
           >
             {isPending && !removingId ? (
               <Loader className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              "Add"
+              "Invite"
             )}
           </Button>
         </div>
       </div>
 
-      {/* Collaborator list */}
-      {collaborators.length > 0 && (
-        <>
-          <Separator />
-          <ul className="space-y-2">
-            {collaborators.map((c) => (
-              <li key={c.id} className="flex items-center gap-2 group">
-                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-700 shrink-0">
-                  {c.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">
-                    {c.name}
+      <ul className="space-y-1">
+        <AnimatePresence initial={false}>
+          {collaborators.map((c) => (
+            <motion.li
+              key={c.id}
+              layout
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="group overflow-hidden"
+            >
+              <div className="flex items-center gap-2.5 rounded-lg p-1.5 transition-colors hover:bg-muted/60">
+                <Avatar name={c.name} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium">{c.name}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {c.email}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{c.email}</p>
                 </div>
-                <Badge
-                  variant="secondary"
-                  className="text-xs shrink-0 px-1.5 py-0"
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-1.5 py-px text-[10px] font-medium ring-1 ring-inset",
+                    c.role === "EDITOR"
+                      ? "bg-primary/10 text-primary ring-primary/25"
+                      : "bg-muted text-muted-foreground ring-border",
+                  )}
                 >
                   {c.role === "EDITOR" ? "Editor" : "Viewer"}
-                </Badge>
+                </span>
                 <button
                   onClick={() => handleRemove(c.id)}
                   disabled={isPending}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 shrink-0"
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                   title="Remove collaborator"
+                  aria-label={`Remove ${c.name}`}
                 >
                   {removingId === c.id ? (
                     <Loader className="h-3.5 w-3.5 animate-spin" />
@@ -149,14 +156,16 @@ export function CollaboratorsPanel({
                     <X className="h-3.5 w-3.5" />
                   )}
                 </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
 
       {collaborators.length === 0 && (
-        <p className="text-xs text-gray-400">No collaborators yet.</p>
+        <p className="text-xs text-muted-foreground">
+          Invite a teammate to review or co-write this script.
+        </p>
       )}
     </div>
   );

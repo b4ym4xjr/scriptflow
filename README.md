@@ -14,13 +14,30 @@ videos faster.
 - JWT sessions (30-day expiry)
 - Bcrypt password hashing
 
+### Dashboard
+
+- Live stats strip (total, in production, due this week, published)
+- **Grid, list and Kanban board views** (choice is remembered); drag cards between columns to change status
+- Instant client-side search, status chips, type filter and sorting (title, updated, due date, status)
+- One-click status changes from any card, with optimistic updates and confetti on publish
+- **Command palette** (`⌘K` / `Ctrl+K`) to jump to scripts, switch views, create a script or toggle the theme
+- Keyboard shortcuts: `/` search, `N` new script, `⌘K` palette
+
 ### Scripts
 
-- Rich text editor (TipTap) with formatting toolbar
-- Status pipeline: Draft → Writing → Review → Ready to Film → Filming → Editing → Ready to Publish → Published → Archived
-- Script metadata: title, description, tags, type, thumbnail notes, target publish date
-- Auto-calculated word count and estimated read duration
-- Search and filter by keyword, status, and type
+- Rich text editor (TipTap) with icon toolbar, live word / character count and on-camera time estimate
+- Status pipeline: Draft → Writing → Review → Ready to Film → Filming → Editing → Ready to Publish → Published → Archived, shown as a stepper
+- Script metadata: title, description, tags, type, thumbnail notes, target publish date (with overdue / due-soon indicators)
+- **Teleprompter mode**: full-screen reading view with countdown, adjustable speed and size, mirror mode, reading guide, and on-screen notes toggle (`Space` play/pause, `↑/↓` speed, `+/-` size, `M` mirror, `R` restart)
+- **Focus mode** in the editor (`⌘⇧F`, `Esc` to exit)
+- **Draft autosave**: unsaved edits are kept locally and offered for restore after a refresh or crash; `⌘S` to save
+
+### Look & feel
+
+- Light and dark themes (follows the system by default) with a no-flash loader
+- Minimalist design with exactly three color roles: a warm-neutral **theme** (paper / ink), one indigo **primary**, and a soft **secondary** tint. Status is conveyed by icon, label and a single-hue progress ramp rather than a rainbow
+- Subtle motion only: fades, staggered lists and layout transitions; skeleton loaders
+- Respects `prefers-reduced-motion`
 
 ### Collaboration
 
@@ -47,7 +64,7 @@ videos faster.
 
 ### Public Share Links
 
-- Generate a shareable read-only link (no login required)
+- Generate a shareable read-only link (no login required) at `/s/<token>`
 - Revoke at any time
 
 ### Email Notifications
@@ -69,7 +86,8 @@ videos faster.
 |------------|------------------------------|
 | Framework  | Next.js 16 (App Router)      |
 | Language   | TypeScript                   |
-| Styling    | Tailwind CSS + shadcn/ui     |
+| Styling    | Tailwind CSS v4 + shadcn/ui  |
+| Animation  | Motion (`motion/react`)      |
 | Editor     | TipTap                       |
 | Auth       | NextAuth (credentials)       |
 | Database   | PostgreSQL (Neon serverless) |
@@ -91,7 +109,7 @@ videos faster.
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/scriptflow.git
+git clone https://github.com/b4ym4xjr/scriptflow.git
 cd scriptflow
 npm install
 cp .env.example .env.local
@@ -152,12 +170,14 @@ Visit [http://localhost:3000](http://localhost:3000)
 │   └── s/[token]/           # Public read-only share page (no auth)
 ├── actions/                 # Server actions (auth, scripts, collaborators, comments, versions, share, notifications)
 ├── components/
-│   ├── scripts/             # ViewScript, ScriptForm, CollaboratorsPanel, CommentsPanel, VersionHistoryPanel, SharePanel
-│   └── ui/                  # shadcn/ui + custom components
+│   ├── dashboard/           # Dashboard, BoardView, StatsStrip
+│   ├── auth/                # Auth page building blocks
+│   ├── scripts/             # ViewScript, ScriptForm, Teleprompter, ScriptCard, collaboration / comments / version / share panels
+│   └── ui/                  # shadcn/ui + custom components (editor, dialog, ...)
 ├── db/
 │   ├── schema.ts            # Drizzle schema + types
 │   └── drizzle.ts           # DB client
-└── lib/                     # Email helpers, token utils, validations
+└── lib/                     # Email helpers, token utils, validations, script metadata (status / due helpers)
 ```
 
 ---
@@ -185,9 +205,26 @@ npx drizzle-kit generate    # Generate migration files
 
 ## Security
 
-- Passwords hashed with Bcrypt
-- All data access is gated by server-side auth checks
-- Role enforcement in every server action (owner / editor / viewer)
-- SQL injection protection via Drizzle-parameterized queries
-- Input validation with Zod on all server action inputs
-- Share tokens are cryptographically random (32-byte hex)
+**Authentication & accounts**
+- Passwords hashed with bcrypt (cost 12); policy (8–72 chars, upper/lower/number) enforced **server-side**, not just in the form
+- Email verification and password-reset tokens are 256-bit random values and only their SHA-256 hash is stored, so a database leak can't yield working links
+- Sign-in does the same bcrypt work whether or not the account exists (no timing-based account discovery); emails are matched case-insensitively
+- Password reset also verifies the mailbox, and re-registering an unverified address replaces the earlier registration (blocks "pre-hijacking" an email)
+- Rate limiting on sign-in (including the raw `/api/auth` endpoint), sign-up, verification, password reset, comments and invites. State is in-memory per server instance, so on serverless hosts treat it as a best-effort brake and put a shared store or your platform's WAF in front for hard limits
+
+**Authorization & input**
+- Every server action checks the session and the caller's role (owner / editor / viewer) before touching data
+- Internal helpers (e.g. notification creation) live outside `"use server"` files so they are not publicly callable
+- All inputs are type- and size-limited server-side; IDs and tokens are shape-checked before reaching the database; queries are parameterised (Drizzle)
+- The owner's public share token is never sent to collaborators, and the public share endpoint returns only the fields it renders
+- Rich text is rendered through TipTap's schema (unknown tags/attributes are dropped) and the teleprompter builds React nodes from parsed text, never `innerHTML`
+- Email templates HTML-escape all user content; subjects are stripped of line breaks
+
+**Transport & browser hardening**
+- Content-Security-Policy (no plugins, no framing, same-origin forms / network / images / fonts), HSTS with preload, `X-Frame-Options: DENY`, `nosniff`, strict referrer policy, COOP, locked-down Permissions-Policy, no `X-Powered-By`
+- Share tokens are cryptographically random (32-byte hex) and revocable at any time
+
+**Known limitations**
+- Sessions are stateless 30-day JWTs, so a password reset does not sign out other devices
+- `script-src` still allows `'unsafe-inline'` (Next.js bootstrap scripts); per-request nonces are the next hardening step
+- Run `npm audit` regularly; remaining advisories are in dev-only tooling (`drizzle-kit`, lint chain)

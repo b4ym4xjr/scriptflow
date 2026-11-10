@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Bell } from "lucide-react";
-import { format } from "date-fns";
+import Link from "next/link";
+import { Bell, BellOff } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,7 +20,11 @@ export function NotificationBell() {
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    getNotifications().then(setNotifs);
+    getNotifications()
+      .then(setNotifs)
+      .catch(() => {
+        /* signed out / offline – the bell simply stays empty */
+      });
   }, []);
 
   const unreadCount = notifs.filter((n) => !n.read).length;
@@ -42,9 +48,21 @@ export function NotificationBell() {
           size="icon"
           className="relative"
         >
-          <Bell className="h-4 w-4" />
+          <motion.span
+            key={unreadCount}
+            animate={
+              unreadCount > 0
+                ? { rotate: [0, -14, 12, -8, 6, 0] }
+                : { rotate: 0 }
+            }
+            transition={{ duration: 0.7, delay: 0.3 }}
+            style={{ originY: 0 }}
+            className="flex"
+          >
+            <Bell className="h-4 w-4" />
+          </motion.span>
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center animate-pop">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -52,28 +70,63 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[calc(100vw-2rem)] sm:w-80 max-w-80 p-0"
+        className="w-[calc(100vw-2rem)] sm:w-96 max-w-96 p-0"
       >
-        <div className="px-4 py-3 border-b">
-          <p className="text-sm font-semibold text-gray-900">Notifications</p>
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <p className="text-sm font-semibold">Notifications</p>
+          {notifs.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {notifs.length} total
+            </span>
+          )}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifs.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              No notifications
-            </p>
+            <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <BellOff className="h-6 w-6" />
+              <p className="text-sm">You&apos;re all caught up</p>
+            </div>
           ) : (
-            notifs.map((n) => (
-              <div
-                key={n.id}
-                className={`px-4 py-3 border-b last:border-0 ${!n.read ? "bg-blue-50" : ""}`}
-              >
-                <p className="text-sm text-gray-800">{n.message}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {format(new Date(n.createdAt), "MMM d, h:mm a")}
-                </p>
-              </div>
-            ))
+            notifs.map((n, i) => {
+              const body = (
+                <>
+                  <span
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                      n.read ? "bg-transparent" : "bg-primary"
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm leading-snug">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(n.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </p>
+                  </div>
+                </>
+              );
+              const cls =
+                "flex gap-3 px-4 py-3 border-b last:border-0 transition-colors hover:bg-muted/60 animate-fade-up";
+              return n.scriptId ? (
+                <Link
+                  key={n.id}
+                  href={`/scripts/${n.scriptId}`}
+                  className={cls}
+                  style={{ animationDelay: `${i * 35}ms` }}
+                  onClick={() => setOpen(false)}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div
+                  key={n.id}
+                  className={cls}
+                  style={{ animationDelay: `${i * 35}ms` }}
+                >
+                  {body}
+                </div>
+              );
+            })
           )}
         </div>
       </DropdownMenuContent>

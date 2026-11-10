@@ -5,21 +5,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db/drizzle";
 import { notifications } from "@/db/schema";
-import type { Notification } from "@/db/schema";
 
 async function requireAuth() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   return session.user.id;
-}
-
-export async function createNotification(
-  userId: string,
-  type: Notification["type"],
-  message: string,
-  scriptId?: string,
-) {
-  await db.insert(notifications).values({ userId, type, message, scriptId: scriptId ?? null });
 }
 
 export async function getNotifications() {

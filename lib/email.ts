@@ -2,8 +2,17 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "noreply@scriptflow.app";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// README documents EMAIL_FROM; FROM_EMAIL is accepted for backwards compatibility.
+const FROM_EMAIL =
+  process.env.EMAIL_FROM ?? process.env.FROM_EMAIL ?? "noreply@scriptflow.app";
+const APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+).replace(/\/+$/, "");
+
+/** Subjects are headers: strip line breaks (header injection) and cap length. */
+function safeSubject(str: string): string {
+  return str.replace(/[\r\n\u2028\u2029]+/g, " ").slice(0, 200);
+}
 
 // Escape HTML to prevent XSS/injection in email templates
 function escapeHtml(str: string): string {
@@ -16,7 +25,7 @@ function escapeHtml(str: string): string {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
+  const verifyUrl = `${APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
 
   await resend.emails.send({
     from: FROM_EMAIL,
@@ -43,11 +52,11 @@ export async function sendCollaboratorAddedEmail(
   role: string,
   scriptId: string,
 ) {
-  const scriptUrl = `${APP_URL}/scripts/${scriptId}`;
+  const scriptUrl = `${APP_URL}/scripts/${encodeURIComponent(scriptId)}`;
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: `You've been added as a collaborator on "${scriptTitle}"`,
+    subject: safeSubject(`You've been added as a collaborator on "${scriptTitle}"`),
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;">
         <h2 style="font-size:24px;font-weight:700;color:#111;margin-bottom:8px;">You're now a collaborator</h2>
@@ -67,7 +76,7 @@ export async function sendStatusChangeEmail(
   newStatus: string,
   scriptId: string,
 ) {
-  const scriptUrl = `${APP_URL}/scripts/${scriptId}`;
+  const scriptUrl = `${APP_URL}/scripts/${encodeURIComponent(scriptId)}`;
   const label = newStatus
     .replace(/_/g, " ")
     .toLowerCase()
@@ -75,7 +84,7 @@ export async function sendStatusChangeEmail(
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: `Script status updated: "${scriptTitle}"`,
+    subject: safeSubject(`Script status updated: "${scriptTitle}"`),
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;">
         <h2 style="font-size:24px;font-weight:700;color:#111;margin-bottom:8px;">Script status updated</h2>
@@ -96,11 +105,11 @@ export async function sendCommentNotificationEmail(
   commentContent: string,
   scriptId: string,
 ) {
-  const scriptUrl = `${APP_URL}/scripts/${scriptId}`;
+  const scriptUrl = `${APP_URL}/scripts/${encodeURIComponent(scriptId)}`;
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: `New comment on "${scriptTitle}"`,
+    subject: safeSubject(`New comment on "${scriptTitle}"`),
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;">
         <h2 style="font-size:24px;font-weight:700;color:#111;margin-bottom:8px;">New comment</h2>
@@ -115,7 +124,7 @@ export async function sendCommentNotificationEmail(
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+  const resetUrl = `${APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
 
   await resend.emails.send({
     from: FROM_EMAIL,

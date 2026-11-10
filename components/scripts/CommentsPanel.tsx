@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { MessageSquare, Trash2, Loader, Send } from "lucide-react";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { addComment, deleteComment } from "@/actions/comments";
+import { Avatar, PanelTitle } from "./PanelTitle";
 
 interface Comment {
   id: string;
@@ -63,85 +65,92 @@ export function CommentsPanel({
 
   return (
     <div className="space-y-4">
-      <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm">
-        <MessageSquare className="h-4 w-4" />
+      <PanelTitle icon={MessageSquare} count={comments.length}>
         Comments
-        {comments.length > 0 && (
-          <span className="text-xs text-gray-400 font-normal">
-            ({comments.length})
-          </span>
-        )}
-      </h4>
+      </PanelTitle>
 
-      {/* Comment list */}
-      {comments.length > 0 && (
-        <ul className="space-y-3">
+      <ul className="space-y-3">
+        <AnimatePresence initial={false}>
           {comments.map((c) => (
-            <li key={c.id} className="group">
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-700 shrink-0 mt-0.5">
-                  {c.userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
+            <motion.li
+              key={c.id}
+              layout
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="group"
+            >
+              <div className="flex items-start gap-2.5">
+                <Avatar name={c.userName} size={26} />
+                <div className="min-w-0 flex-1 rounded-xl rounded-tl-sm bg-muted/60 px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-900">
-                      {c.userName}
+                    <span className="text-xs font-semibold">{c.userName}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {formatDistanceToNow(new Date(c.createdAt), {
+                        addSuffix: true,
+                      })}
                     </span>
-                    <span className="text-xs text-gray-400">
-                      {format(new Date(c.createdAt), "MMM d")}
-                    </span>
+                    {(c.userId === currentUserId || isOwner) && (
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        disabled={isPending}
+                        aria-label="Delete comment"
+                        className="ml-auto shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        {deletingId === c.id ? (
+                          <Loader className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words overflow-hidden">
+                  <p className="mt-0.5 overflow-hidden whitespace-pre-wrap break-words text-xs sm:text-sm">
                     {c.content}
                   </p>
                 </div>
-                {(c.userId === currentUserId || isOwner) && (
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    disabled={isPending}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 shrink-0"
-                  >
-                    {deletingId === c.id ? (
-                      <Loader className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                )}
               </div>
-            </li>
+            </motion.li>
           ))}
-        </ul>
+        </AnimatePresence>
+      </ul>
+
+      {comments.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          No comments yet — start the conversation.
+        </p>
       )}
 
-      {/* Add comment */}
       <div className="space-y-2">
         <Textarea
           aria-label="Add comment"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Add a comment..."
-          className="text-sm resize-none min-h-[72px] sm:min-h-16 rounded-lg"
+          placeholder="Add a comment…"
+          className="min-h-[72px] resize-none rounded-xl text-sm sm:min-h-16"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAdd();
           }}
           disabled={isPending}
         />
-        <Button
-          size="sm"
-          onClick={handleAdd}
-          disabled={isPending || !text.trim()}
-          className="h-9 sm:h-8 px-3 bg-black hover:bg-gray-800 text-white rounded-lg"
-        >
-          {isPending && !deletingId ? (
-            <Loader className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <>
-              <Send className="h-3.5 w-3.5 mr-1.5" />
-              Comment
-            </>
-          )}
-        </Button>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-muted-foreground">⌘↵ to send</span>
+          <Button
+            size="sm"
+            onClick={handleAdd}
+            disabled={isPending || !text.trim()}
+            className="h-8 gap-1.5 rounded-lg bg-primary px-3 text-primary-foreground hover:opacity-90"
+          >
+            {isPending && !deletingId ? (
+              <Loader className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                Comment
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

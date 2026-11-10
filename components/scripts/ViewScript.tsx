@@ -1,24 +1,35 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  FileText,
+  Image as ImageIcon,
+  Pencil,
+  Presentation,
+  Tag,
+  Video,
+} from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Editor } from "@/components/ui/editor";
-import { ArrowLeft, Video, Calendar, Tag, Image } from "lucide-react";
 import { DeleteScriptButton } from "./DeleteScriptButton";
 import { CollaboratorsPanel } from "./CollaboratorsPanel";
 import { CommentsPanel } from "./CommentsPanel";
 import { SharePanel } from "./SharePanel";
-import { format } from "date-fns";
-import Link from "next/link";
+import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import { ScriptEditorLayout } from "./ScriptEditorLayout";
-import { Badge } from "@/components/ui/badge";
-import type {
-  Script,
-  ScriptStatus,
-  CollaboratorRole,
-  ScriptVersion,
-} from "@/db/schema";
+import { PipelineStepper, StatusBadge } from "./StatusBadge";
+import { Teleprompter } from "./Teleprompter";
 import { Separator } from "@/components/ui/separator";
-import { Pencil } from "lucide-react";
+import type { Script, CollaboratorRole, ScriptVersion } from "@/db/schema";
+import { DUE_CHIP, TYPE_BY_VALUE, getDueInfo } from "@/lib/script-meta";
+import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-local-storage";
 
 interface Collaborator {
   id: string;
@@ -45,10 +56,24 @@ interface ViewScriptProps {
   currentUserId: string;
 }
 
-function getStatusLabel(status: ScriptStatus) {
-  if (status === "READY_TO_FILM") return "Ready to Film";
-  if (status === "READY_TO_PUBLISH") return "Ready to Publish";
-  return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+function Field({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon?: typeof Tag;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {label}
+      </h4>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
 }
 
 export default function ViewScript({
@@ -59,17 +84,21 @@ export default function ViewScript({
   comments = [],
   currentUserId,
 }: ViewScriptProps) {
+  const [prompting, setPrompting] = useState(false);
   const canEdit = role === "owner" || role === "editor";
+  const mounted = useMounted();
+  const due = mounted
+    ? getDueInfo(script.targetPublishDate, script.status)
+    : ({ state: "none", days: null, label: "" } as const);
+  const type = script.scriptType ? TYPE_BY_VALUE[script.scriptType] : null;
 
   const Sidebar = (
-    <div className="space-y-4 md:space-y-6 text-sm">
+    <div className="space-y-5 md:space-y-6 text-sm">
       <div className="space-y-3">
-        <h4 className="font-medium text-gray-900">Status</h4>
-        <div className="flex flex-col gap-2">
-          <Badge variant="outline" className="w-fit">
-            {getStatusLabel(script.status)}
-          </Badge>
-          <span className="text-xs text-gray-500">
+        <PipelineStepper status={script.status} />
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={script.status} />
+          <span className="text-xs text-muted-foreground">
             Created {format(new Date(script.createdAt), "MMM d, yyyy")}
           </span>
         </div>
@@ -77,78 +106,68 @@ export default function ViewScript({
 
       <Separator />
 
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Tag className="h-4 w-4" /> Type
-        </h4>
-        <p className="text-gray-600 break-words">{script.scriptType || "Not specified"}</p>
-      </div>
-
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Video className="h-4 w-4" />
-          Title
-        </h4>
-        <p className="text-gray-600 break-words">{script.title || "Not specified"}</p>
-      </div>
-
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900">Description</h4>
-        <p className="text-gray-600 whitespace-pre-wrap break-words overflow-hidden">
-          {script.description || "No description"}
+      <Field icon={Video} label="Type">
+        <p className="break-words text-foreground/90">
+          {type?.label || "Not specified"}
         </p>
-      </div>
+      </Field>
 
-      <Separator />
+      <Field label="Description">
+        <p className="overflow-hidden whitespace-pre-wrap break-words text-foreground/90">
+          {script.description || (
+            <span className="text-muted-foreground">No description</span>
+          )}
+        </p>
+      </Field>
 
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Tag className="h-4 w-4" /> Tags
-        </h4>
-        <div className="flex flex-wrap gap-2">
+      <Field icon={Tag} label="Tags">
+        <div className="flex flex-wrap gap-1.5">
           {script.tags ? (
-            script.tags.split(",").map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="px-1.5 py-0 text-xs"
-              >
-                {tag.trim()}
-              </Badge>
-            ))
+            script.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+              .map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                >
+                  #{tag}
+                </span>
+              ))
           ) : (
-            <span className="text-gray-500">No tags</span>
+            <span className="text-muted-foreground">No tags</span>
           )}
         </div>
-      </div>
+      </Field>
 
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Image className="h-4 w-4" /> Thumbnail Idea
-        </h4>
-        <p className="text-gray-600 whitespace-pre-wrap break-words overflow-hidden">
-          {script.thumbnailNotes || "No notes"}
+      <Field icon={ImageIcon} label="Thumbnail Idea">
+        <p className="overflow-hidden whitespace-pre-wrap break-words text-foreground/90">
+          {script.thumbnailNotes || (
+            <span className="text-muted-foreground">No notes</span>
+          )}
         </p>
-      </div>
+      </Field>
 
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-          <Calendar className="h-4 w-4" /> Target Date
-        </h4>
-        <p className="text-gray-600">
-          {script.targetPublishDate
-            ? format(new Date(script.targetPublishDate), "MMM d, yyyy")
-            : "Not set"}
-        </p>
-      </div>
+      <Field icon={Calendar} label="Target Date">
+        {script.targetPublishDate ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{format(new Date(script.targetPublishDate), "MMM d, yyyy")}</span>
+            {due.state !== "none" && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
+                  DUE_CHIP[due.state],
+                )}
+              >
+                {due.label}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">Not set</span>
+        )}
+      </Field>
 
       {role === "owner" && (
         <>
@@ -165,13 +184,12 @@ export default function ViewScript({
         </>
       )}
 
-      {/*TODO: Fix versioning*/}
-      {/*<Separator />*/}
-      {/*<VersionHistoryPanel*/}
-      {/*  scriptId={script.id}*/}
-      {/*  versions={versions}*/}
-      {/*  canEdit={canEdit}*/}
-      {/*/>*/}
+      <Separator />
+      <VersionHistoryPanel
+        scriptId={script.id}
+        versions={versions}
+        canEdit={canEdit}
+      />
 
       <Separator />
       <CommentsPanel
@@ -184,23 +202,36 @@ export default function ViewScript({
   );
 
   const HeaderArea = (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <Link href="/">
           <Button aria-label="back" variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate max-w-[180px] sm:max-w-xs md:max-w-sm lg:max-w-md">
+        <h1 className="max-w-[160px] truncate font-display text-base font-semibold sm:max-w-xs sm:text-lg md:max-w-sm lg:max-w-md">
           {script.title}
         </h1>
+        <StatusBadge status={script.status} className="hidden sm:inline-flex" />
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPrompting(true)}
+          className="gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+        >
+          <Presentation className="h-4 w-4" />
+          <span className="hidden sm:inline">Teleprompter</span>
+        </Button>
         {canEdit && (
           <Link href={`/scripts/${script.id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
+            <Button
+              size="sm"
+              className="gap-2 bg-primary text-primary-foreground hover:opacity-90"
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
           </Link>
         )}
@@ -210,19 +241,48 @@ export default function ViewScript({
   );
 
   return (
-    <ScriptEditorLayout header={HeaderArea} sidebar={Sidebar}>
-      <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-gray-500 font-mono">
-        {script.wordCount && <span>{script.wordCount} words</span>}
-        {script.estimatedDuration && (
-          <span>~{script.estimatedDuration} min read</span>
+    <>
+      <ScriptEditorLayout header={HeaderArea} sidebar={Sidebar}>
+        <div className="mb-6 animate-fade-up space-y-3">
+          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            {script.title}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+            {script.wordCount ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1">
+                <FileText className="h-3 w-3" />
+                {script.wordCount.toLocaleString()} words
+              </span>
+            ) : null}
+            {script.estimatedDuration ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1">
+                <Clock className="h-3 w-3" />~{script.estimatedDuration} min on camera
+              </span>
+            ) : null}
+            <span>
+              Updated {format(new Date(script.updatedAt), "MMM d, h:mm a")}
+            </span>
+          </div>
+        </div>
+        <Editor
+          // Remount on every save/revert so the read-only view never goes stale.
+          key={new Date(script.updatedAt).getTime()}
+          content={script.content}
+          onChange={() => {}}
+          editable={false}
+          className="min-h-[300px] sm:min-h-[400px] md:min-h-[calc(100vh-320px)]"
+        />
+      </ScriptEditorLayout>
+
+      <AnimatePresence>
+        {prompting && (
+          <Teleprompter
+            title={script.title}
+            html={script.content}
+            onClose={() => setPrompting(false)}
+          />
         )}
-      </div>
-      <Editor
-        content={script.content}
-        onChange={() => {}}
-        editable={false}
-        className="min-h-[300px] sm:min-h-[400px] md:min-h-[calc(100vh-250px)]"
-      />
-    </ScriptEditorLayout>
+      </AnimatePresence>
+    </>
   );
 }

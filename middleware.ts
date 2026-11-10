@@ -10,6 +10,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!sign-in|sign-up|verify-email|reset-password|forgot-password|api/auth|_next/static|_next/image|favicon.ico).*)",
+    // `s/` = public read-only share links (/s/[token]); they must not require a session.
+    "/((?!s/|sign-in|sign-up|verify-email|reset-password|forgot-password|api/auth|_next/static|_next/image|favicon.ico).*)",
   ],
 };

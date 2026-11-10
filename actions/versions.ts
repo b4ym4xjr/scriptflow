@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db/drizzle";
 import { scriptVersions, scripts, scriptCollaborators } from "@/db/schema";
+import { LIMITS } from "@/lib/validations";
 
 async function requireAuth() {
   const session = await auth();
@@ -18,6 +19,14 @@ export async function saveVersion(
   content: string,
 ) {
   const userId = await requireAuth();
+  if (
+    typeof title !== "string" ||
+    typeof content !== "string" ||
+    title.length > LIMITS.title ||
+    content.length > LIMITS.content
+  ) {
+    return { error: "Invalid version data." };
+  }
 
   // Verify user is owner or EDITOR collaborator
   const script = await db

@@ -7,7 +7,8 @@ import { db } from "@/db/drizzle";
 import { scriptCollaborators, scripts, users } from "@/db/schema";
 import type { CollaboratorRole } from "@/db/schema";
 import { sendCollaboratorAddedEmail } from "@/lib/email";
-import { createNotification } from "@/actions/notifications";
+import { createNotification } from "@/lib/notifications";
+import { rateLimit } from "@/lib/rate-limit";
 
 async function requireAuth() {
   const session = await auth();
@@ -34,6 +35,16 @@ export async function addCollaborator(
 
   if (!(await requireOwner(scriptId, currentUserId))) {
     return { error: "Only the script owner can add collaborators." };
+  }
+
+  if (!rateLimit(`collab:${currentUserId}`, 30, 60 * 60 * 1000).ok) {
+    return { error: "You're adding collaborators too quickly. Try again later." };
+  }
+  if (role !== "VIEWER" && role !== "EDITOR") {
+    return { error: "Invalid role." };
+  }
+  if (typeof email !== "string" || email.length > 254) {
+    return { error: "Please enter a valid email address." };
   }
 
   // Find the user by email (case-insensitive)
@@ -89,7 +100,7 @@ export async function addCollaborator(
   try {
     await sendCollaboratorAddedEmail(
       targetUser[0].email,
-      targetUser[0].email,
+      targetUser[0].name,
       owner[0]?.name ?? "Someone",
       script[0]?.title ?? "a script",
       role,
@@ -163,7 +174,7 @@ export async function getScriptCollaborators(scriptId: string) {
 export async function getMyCollaborations() {
   const userId = await requireAuth();
 
-  return db
+  const rows = await db
     .select({
       script: scripts,
       role: scriptCollaborators.role,
@@ -171,4 +182,7 @@ export async function getMyCollaborations() {
     .from(scriptCollaborators)
     .innerJoin(scripts, eq(scriptCollaborators.scriptId, scripts.id))
     .where(eq(scriptCollaborators.userId, userId));
+
+  // Never expose the owner's public share token to collaborators.
+  return rows.map((r) => ({ ...r, script: { ...r.script, shareToken: null } }));
 }
